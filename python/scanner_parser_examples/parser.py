@@ -1,6 +1,6 @@
 # Implementation of a parser
 # Recognize expressions using grammar:
-# EXP -> EXP op EXP | EXP -> (EXP) | cte
+# EXP -> EXP op EXP | (EXP) | cte
 # which was modified to remove ambiguity to:
 # EXP  -> cte EXP1 | (EXP) EXP1
 # EXP1 -> op EXP EXP1 | empty
