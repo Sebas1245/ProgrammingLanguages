@@ -13,18 +13,22 @@ OPB = 102  # Binary operator
 LRP = 103  # Delimiter: left parenthesis
 RRP = 104  # Delimiter: right parenthesis
 END = 105  # End of input
+COM = 106  # Comma separator
+ASG = 107  # Assigment operator
+IDE = 108  # Identifier
 ERR = 200  # Lexical error: unknown word
 
 # Transition matrix: DFA coding
 # [row, column] = [non-final state, transition]
 # States > 99 are final (ACCEPTORS)
 # Special case: State 200 = ERROR
-#      dig  op  (   ) rare spc  .   $
-MT = [[  1,OPB,LRP,RRP,  4,  0,  4,END], # state 0 - initial state
-      [  1,INT,INT,INT,  4,INT,  2,INT], # state 1 - integer digits
-      [  3,  4,  4,  4,  4,ERR,  4,  4], # state 2 - first floating decimal
-      [  3,FLT,FLT,FLT,  4,FLT,  4,FLT], # state 3 - float remaining decimals
-      [  4,  4,  4,  4,  4,ERR,  4,  4]] # state 4 - error state
+#      dig  op  (   ) rare  spc  .   $    ,    =   lett  _
+MT = [[  1,OPB,LRP,RRP,  4,  0,  4, END, COM, ASG,   5,   4], # state 0 - initial state
+      [  1,INT,INT,INT,  4, INT, 2, INT, INT,   4,   4,   4], # state 1 - integer digits
+      [  3,  4,  4,  4,  4, ERR, 4,  4,    4,   4,   4,   4], # state 2 - first floating decimal
+      [  3,FLT,FLT,FLT,  4, FLT, 4, FLT, FLT,   4,   4,   4], # state 3 - float remaining decimals
+      [  4,  4,  4,  4,  4, ERR, 4,  4,    4,   4,   4,   4], # state 4 - error state
+      [  5,IDE,IDE,IDE,  4, IDE, 4, END, IDE, IDE,   5,   5]] # state 5 - identifier
 
 # Character filter: returns the column number of the transition array
 # according to the given character
@@ -47,6 +51,14 @@ def filter(c):
         return 6
     elif c == '$': # end of input
         return 7
+    elif c == ',': # comma
+        return 8 
+    elif c == '=': # equal character
+        return 9
+    elif ord(c) >= ord('a') and ord(c) <= ord('z'): # letter
+        return 10
+    elif c == '_':
+        return 11
     else: # rare character
         return 4
 
@@ -73,6 +85,10 @@ def get_token():
             _leer = False # the next character has already been read
             print("Float", lexema)
             return FLT
+        elif edo == IDE:    
+            _leer = False # the next character has already been read
+            print("Identifier", lexema)
+            return IDE
         elif edo == OPB:   
             lexema += _c  # the last character forms the lexeme
             print("Operator", lexema)
@@ -88,11 +104,19 @@ def get_token():
         elif edo == END:
             print("End of expression")
             return END
+        elif edo == COM:   
+            lexema += _c  # the last character forms the lexeme
+            print("Separator", lexema)
+            return COM
+        elif edo == ASG:   
+            lexema += _c  # the last character forms the lexeme
+            print("Assigment", lexema)
+            return ASG
         else:   
             leer = False # last character is not rare
             print("ERROR! illegal word", lexema)
             return ERR
             
         
-    
+get_token()
 
