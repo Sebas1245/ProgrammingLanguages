@@ -9,7 +9,17 @@
 #
 # Author: Dr. Santiago Conant
 
+# Modified grammar 
+# EXP -> (EXP)EXP1 | cteEXP1 | idEXP2EXP1
+# EXP1 -> opEXPEXP1 | empty 
+# EXP2 -> empty | =EXP | (EXP3
+# EXP3 -> ) | ARGS)
+# ARGS -> ARGSARGS1
+# ARGS1 -> empty | ,ARGS
+
 import sys
+
+from numpy import mat
 import get_token as scanner
 
 # Match and get the next token
@@ -50,6 +60,21 @@ def exp1():
         exp()
         exp1()
 
+def args(): 
+    exp()
+    args1()
+
+def args1():
+    if token == scanner.COM:
+        match(token)
+        args1()
+
+def exp3():
+    if token == scanner.RRP:
+        match(token)
+    else:
+        args()
+        match(scanner.RRP)
 # End with an error message
 def error(message):
     print("ERROR:", message)
