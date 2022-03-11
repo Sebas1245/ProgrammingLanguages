@@ -8,25 +8,24 @@ def match(expectedtoken):
     if token == expectedtoken:
         token = scanner.get_token()
     else:
-        print_error()
+        print_error(">>LEXICAL ERROR<<")
 
 # Main function: implement parsing
 def parser():
     global token 
     token = scanner.get_token() # initialize with the first token
-    print(token)
-    # tarski()
+    tarski()
     if token == scanner.END:
         print(">>CORRECT INPUT<<")
     else:
-        print_error()
+        print_error(">>SYNTAX ")
 
 def tarski():
     sentence()
     if token == scanner.END:
         match(token)
     else:
-        print_error()
+        print_error(">>SYNTAX ERROR<<")
 
 def sentence():
     if token == scanner.OBJ:
@@ -45,11 +44,9 @@ def sentence():
         sentence()
         sentence1()
     elif token == scanner.QTF:
-        print("token matched quantifier")
         match(token)
         match(scanner.VAR)
         match(scanner.PRD)
-        print("token match period")
         sentence()
         sentence1()
     else:
@@ -70,8 +67,8 @@ def term():
     elif token == scanner.CNT:
         match(token)
 
-def print_error():
-    print(">>SYNTAX ERROR<<")
+def print_error(err_message):
+    print(err_message)
     sys.exit(1)
 
 parser()
