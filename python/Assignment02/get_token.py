@@ -27,8 +27,8 @@ TRANSITION_MATRIX = [
     #   0   1   2     3   4  5   6   7   8   9  10   11  12  13  14  15  16   17 18  19  20  21  22 23  24   25   26  27
     #   let LET dig   _   @  C   T   D   L   R   F   B   U   E   ~   &   |    -   >   <   =   $  (   )   ,   .   spc rare
     [     1,  2,  7,  7,  3,  2,  2,  2,  2,  2,  2,  2,  2,  2,NEG,BOP,BOP, 4,   7,  5,ASG,END,LPS,RPS,COM,PRD,  0,  7], # state 0 - initial state 
-    [     1,  7,  1,  1,  7,  7,  7,  7,  7,  7,  7,  7,  7,  7,  7,  7,  7, 7,   7,  7,VAR,VAR,VAR,VAR,VAR,VAR,VAR,  7], # state 1 - recieved undercase letter 
-    [     7,  2,  2,  2,  7,  2,  2,  2,  2,  2,  2,  2,  2,  2,  7,  7,  7, 7,   7,  7,CNT,CNT,CNT,CNT,CNT,CNT,CNT,  7], # state 2 - recieved uppercase letter
+    [     1,  7,  1,  1,  7,  7,  7,  7,  7,  7,  7,  7,  7,  7,  7,  7,  7, 7,   7,  7,VAR,  7,VAR,VAR,VAR,VAR,VAR,  7], # state 1 - recieved undercase letter 
+    [     7,  2,  2,  2,  7,  2,  2,  2,  2,  2,  2,  2,  2,  2,  7,  7,  7, 7,   7,  7,CNT,  7,CNT,CNT,CNT,CNT,CNT,  7], # state 2 - recieved uppercase letter
     [     7,  7,  7,  7,  7,OBJ,OBJ,OBJ,REL,REL,REL,REL,QTF,QTF,  7,  7,  7,  7,  7,  7,  7,  7,  7,  7,  7,  7,  7,  7], # state 3 - looking for objects, relations or quantifiers
     [     7,  7,  7,  7,  7,  7,  7,  7,  7,  7,  7,  7,  7,  7,  7,  7,  7,  7,BOP,  7,  7,  7,  7,  7,  7,  7,  7,  7], # state 4 - dash character
     [     7,  7,  7,  7,  7,  7,  7,  7,  7,  7,  7,  7,  7,  7,  7,  7,  7,  6,  7,  7,  7,  7,  7,  7,  7,  7,  7,  7], # state 5 - < character
@@ -100,76 +100,91 @@ def filter(c):
     else:
         return 27
 
-# Get token function: implement lexical analysis in a way that can be used by the parser
+_c = None    # next character
+_read = True # indicates if it is required to read a character from the standard input
+
 def get_token():
     """Implements a lexical analyzer: read characters from standard input"""
+    global _c, _read
     state = 0 # state number in the automaton
     lexeme = "" # word that generates the token
-    tokens = []
-    read = True # indicates if it is required to read a character from standard input
     while (True):
         while state < 100:    # while the state is neither ACCEPTOR nor ERROR
-            if read: c = sys.stdin.read(1)
-            else: read = True
-            state = TRANSITION_MATRIX[state][filter(c)]
-            if state < 100 and state != 0: lexeme += c
+            if _read: _c = sys.stdin.read(1)
+            else: _read = True
+            state = TRANSITION_MATRIX[state][filter(_c)]
+
+            if state < 100 and state != 0: lexeme += _c
         if state == VAR:    
-            read = False # the next character has already been read
-            print("[VAR]", lexeme)
-            return VAR
+            _read = False # the next character has already been read
+            # print("[VAR]", lexeme)
+            return (VAR,lexeme)
+            # return VAR
         elif state == CNT:   
-            read = False # the next character has already been read
-            print("[CNT]", lexeme)
-            return CNT
+            _read = False # the next character has already been read
+            # print("[CNT]", lexeme)
+            return (CNT,lexeme)
+            # return CNT
         elif state == OBJ:   
-            lexeme += c  # the last character forms the lexeme
-            print("[OBJ]", lexeme)
-            return OBJ
+            lexeme += _c  # the last character forms the lexeme
+            # print("[OBJ]", lexeme)
+            return (OBJ,lexeme)
+            # return OBJ
         elif state == REL:   
-            lexeme += c  # the last character forms the lexeme
-            print("[REL]", lexeme)
-            return REL
+            lexeme += _c  # the last character forms the lexeme
+            # print("[REL]", lexeme)
+            return (REL,lexeme)
+            # return REL
         elif state == QTF:  
-            lexeme += c  # the last character forms the lexeme
-            print("[QTF]", lexeme)
-            return QTF
+            lexeme += _c  # the last character forms the lexeme
+            # print("[QTF]", lexeme)
+            return (QTF,lexeme)
+            # return QTF
         elif state == NEG:
-            lexeme += c  # the last character forms the lexeme
-            print("[NEG]", lexeme)
-            return NEG
+            lexeme += _c  # the last character forms the lexeme
+            # print("[NEG]", lexeme)
+            return (NEG,lexeme)
+            # return NEG
         elif state == BOP:
-            lexeme += c  # the last character forms the lexeme
-            print("[BOP]", lexeme)
-            return BOP
+            lexeme += _c  # the last character forms the lexeme
+            # print("[BOP]", lexeme)
+            return (BOP,lexeme)
+            # return BOP
         elif state == ASG:
-            lexeme += c  # the last character forms the lexeme
-            print("[ASG]", lexeme)
-            return ASG
+            lexeme += _c  # the last character forms the lexeme
+            # print("[ASG]", lexeme)
+            return (ASG,lexeme)
+            # return ASG
         elif state == LPS:
-            lexeme += c  # the last character forms the lexeme
-            print("[LPS]", lexeme)
-            return LPS
+            lexeme += _c  # the last character forms the lexeme
+            # print("[LPS]", lexeme)
+            return (LPS,lexeme)
+            # return LPS
         elif state == RPS:
-            lexeme += c  # the last character forms the lexeme
-            print("[RPS]", lexeme)
-            return RPS
+            lexeme += _c  # the last character forms the lexeme
+            # print("[RPS]", lexeme)
+            return (RPS,lexeme)
+            # return RPS
         elif state == COM:
-            lexeme += c  # the last character forms the lexeme
-            print("[COM]", lexeme)
-            return COM
+            lexeme += _c  # the last character forms the lexeme
+            # print("[COM]", lexeme)
+            return (COM,lexeme)
+            # return COM
         elif state == PRD:
-            lexeme += c  # the last character forms the lexeme
-            print("[PRD]", lexeme)
-            return PRD
-        elif state == ERR:   
-            read = False # last character is not rare
-            return ERR
-        tokens.append(state)
-        if state == END: 
-            print("[END] $")
-            return END
-        lexeme = ""
-        state = 0
+            lexeme += _c  # the last character forms the lexeme
+            # print("[PRD]", lexeme)
+            return (PRD,lexeme)
+            # return PRD
+        elif state == END:
+            lexeme += _c  # the last character forms the lexeme
+            # print("[END]", lexeme)
+            return (END,lexeme)
+            # return END
+        else:   
+            _read = False # last character is not rare
+            print(">>LEXICAL ERROR<<")
+            sys.exit(1)
+
 
 # Main function: implement lexical analysis
 def scanner():
@@ -230,5 +245,3 @@ def scanner():
             return tokens
         lexeme = ""
         state = 0
-
-scanner()

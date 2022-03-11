@@ -1,29 +1,23 @@
 import sys
 
-import scanner
+import get_token as scanner
 
 # Match and get the next token
 def match(expectedtoken):
-    global token
+    global token, lexeme
     if token == expectedtoken:
-        token = scanner.get_token()
+        print_token(token, lexeme)
+        token, lexeme = scanner.get_token()
     else:
-        print_error(">>LEXICAL ERROR<<")
+        print_error(">>SYNTAX ERROR<<")
 
 # Main function: implement parsing
 def parser():
-    global token 
-    token = scanner.get_token() # initialize with the first token
-    tarski()
-    if token == scanner.END:
-        print(">>CORRECT INPUT<<")
-    else:
-        print_error(">>SYNTAX ")
-
-def tarski():
+    global token, lexeme
+    token, lexeme = scanner.get_token()# initialize with the first token
     sentence()
     if token == scanner.END:
-        match(token)
+        print(">>CORRECT INPUT<<")
     else:
         print_error(">>SYNTAX ERROR<<")
 
@@ -70,5 +64,33 @@ def term():
 def print_error(err_message):
     print(err_message)
     sys.exit(1)
+
+def print_token(token, lexeme=" "):
+    if token == scanner.VAR:    
+        print("[VAR]", lexeme)
+    elif token == scanner.CNT:   
+        print("[CNT]", lexeme)
+    elif token == scanner.OBJ:   
+        print("[OBJ]", lexeme)
+    elif token == scanner.REL:   
+        print("[REL]", lexeme)
+    elif token == scanner.QTF:  
+        print("[QTF]", lexeme)
+    elif token == scanner.NEG:
+        print("[NEG]", lexeme)
+    elif token == scanner.BOP:
+        print("[BOP]", lexeme)
+    elif token == scanner.ASG:
+        print("[ASG]", lexeme)
+    elif token == scanner.LPS:
+        print("[LPS]", lexeme)
+    elif token == scanner.RPS:
+        print("[RPS]", lexeme)
+    elif token == scanner.COM:
+        print("[COM]", lexeme)
+    elif token == scanner.PRD:
+        print("[PRD]", lexeme)
+    elif token == scanner.END:
+        print("[END]", lexeme)
 
 parser()
