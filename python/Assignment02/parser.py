@@ -8,25 +8,25 @@ def match(expectedtoken):
     if token == expectedtoken:
         token = scanner.get_token()
     else:
-        error()
+        print_error()
 
 # Main function: implement parsing
 def parser():
     global token 
     token = scanner.get_token() # initialize with the first token
     print(token)
-    tarski()
+    # tarski()
     if token == scanner.END:
         print(">>CORRECT INPUT<<")
     else:
-        error(">>SYNTAX ERROR<<")
+        print_error()
 
 def tarski():
     sentence()
     if token == scanner.END:
         match(token)
     else:
-        print(">>SYNTAX ERROR<<")
+        print_error()
 
 def sentence():
     if token == scanner.OBJ:
@@ -70,7 +70,7 @@ def term():
     elif token == scanner.CNT:
         match(token)
 
-def error():
+def print_error():
     print(">>SYNTAX ERROR<<")
     sys.exit(1)
 

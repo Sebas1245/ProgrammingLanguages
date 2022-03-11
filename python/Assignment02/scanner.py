@@ -27,8 +27,8 @@ TRANSITION_MATRIX = [
     #   0   1   2     3   4  5   6   7   8   9  10   11  12  13  14  15  16   17 18  19  20  21  22 23  24   25   26  27
     #   let LET dig   _   @  C   T   D   L   R   F   B   U   E   ~   &   |    -   >   <   =   $  (   )   ,   .   spc rare
     [     1,  2,  7,  7,  3,  2,  2,  2,  2,  2,  2,  2,  2,  2,NEG,BOP,BOP, 4,   7,  5,ASG,END,LPS,RPS,COM,PRD,  0,  7], # state 0 - initial state 
-    [     1,  7,VAR,VAR,  1,  7,  7,  7,  7,  7,  7,  7,  7,  7,  7,  7,  7, 7,   7,  7,  7,VAR,VAR,VAR,VAR,VAR,VAR,  7], # state 1 - recieved undercase letter 
-    [     2,CNT,CNT,CNT,  1,CNT,CNT,CNT,CNT,CNT,CNT,CNT,CNT,CNT,  7,  7,  7, 7,   7,  7,  7,CNT,CNT,CNT,CNT,CNT,CNT,  7], # state 2 - recieved uppercase letter
+    [     1,  7,  1,  1,  1,  7,  7,  7,  7,  7,  7,  7,  7,  7,  7,  7,  7, 7,   7,  7,  7,VAR,VAR,VAR,VAR,VAR,VAR,  7], # state 1 - recieved undercase letter 
+    [     7,  2,  2,  2,  1,  2,  2,  2,  2,  2,  2,  2,  2,  2,  7,  7,  7, 7,   7,  7,  7,CNT,CNT,CNT,CNT,CNT,CNT,  7], # state 2 - recieved uppercase letter
     [     7,  7,  7,  7,  7,OBJ,OBJ,OBJ,REL,REL,REL,REL,QTF,QTF,  7,  7,  7,  7,  7,  7,  7,  7,  7,  7,  7,  7,ERR,  7], # state 3 - looking for objects, relations or quantifiers
     [     7,  7,  7,  7,  7,  7,  7,  7,  7,  7,  7,  7,  7,  7,  7,  7,  7,  7,BOP,  7,  7,  7,  7,  7,  7,  7,ERR,  7], # state 4 - dash character
     [     7,  7,  7,  7,  7,  7,  7,  7,  7,  7,  7,  7,  7,  7,  7,  7,  7,  6,  7,  7,  7,  7,  7,  7,  7,  7,ERR,  7], # state 5 - < character
