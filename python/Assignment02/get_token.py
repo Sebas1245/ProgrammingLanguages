@@ -1,4 +1,7 @@
-# Implementation of a scanner
+# Implementation of a scanner for Tarski's World
+# Authors:
+# Sebastián Saldaña A01570274, Ana Elisa Estrada A01251091 and Estefanía Charles A01283472
+
 import sys
 
 
