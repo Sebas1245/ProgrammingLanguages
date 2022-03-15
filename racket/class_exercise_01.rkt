@@ -1,6 +1,5 @@
 #lang racket 
 
-(define pi 3.1416)
 (define (calcPerimeter radius)
     (* (* 2 radius) pi))
 
@@ -9,11 +8,18 @@
 
 (define (calcDiameter radius)
     (* 2 radius))
-;;; (define (circle number string)
-;;;     (if (= string "circle")
-;;;         "got circle"
-;;;         "didnt get circle"))
 
-(calcPerimeter 4)
-(calcArea 4)
-(calcDiameter 4)
+(define (circle radius property)
+    (cond 
+        ((eq? property 'perimeter) (calcPerimeter radius) )
+        ((eq? property 'area) (calcArea radius))
+        ((eq? property 'diameter) (calcDiameter radius))
+        (else 'invalid_property)
+    )
+)
+
+(define (largest a b c d)
+    (cond (and (>= a b) (>= a c) (>= d)) a) 
+    ((and (>= b c) (>= c)) b)
+    ((>= c d) c)
+    (else d)))
