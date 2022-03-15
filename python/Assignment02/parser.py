@@ -32,6 +32,14 @@ def sentence():
         term()
         match(scanner.RPS)
         sentence1()
+    elif token == scanner.REL:
+        match(token)
+        match(scanner.LPS)
+        term()
+        match(scanner.COM)
+        term()
+        match(scanner.RPS)
+        sentence1()
     elif token == scanner.LPS:
         match(token)
         sentence()
