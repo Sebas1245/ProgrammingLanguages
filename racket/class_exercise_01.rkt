@@ -19,7 +19,19 @@
 )
 
 (define (largest a b c d)
-    (cond (and (>= a b) (>= a c) (>= d)) a) 
+    (cond 
+    ((and (>= a b) (>= a c) (>= d)) a) 
     ((and (>= b c) (>= c)) b)
     ((>= c d) c)
     (else d)))
+
+(define (factorial n)
+    (if (zero? n) 
+        1
+        (* n (factorial (- n 1)))))
+
+(define (sum n)
+    (if (= n 1)
+        1
+        (+ n (sum (- n 1))) 
+    ))
