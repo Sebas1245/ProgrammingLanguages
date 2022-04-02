@@ -1,3 +1,6 @@
+; Assignent 3
+; Code for assignment 3 for TC2006 Programming Languages course
+; Authors: Ana Elisa Estrada A01251091 and Estefanía Charles A01283472, Sebastián Saldaña A01570274
 #lang racket
 
 ; Problem 1
@@ -36,10 +39,10 @@
 )
 
 ; Problem 3
- (define (sequence n m)
+(define (sequences n m)
   (cond ((= n 1) (asc m))
-        ((even? n) (s (- n 1) m) (newline) (des m))
-        (else (s (- n 1) m) (newline) (asc m))))
+        ((even? n) (sequences (- n 1) m) (newline) (des m))
+        (else (sequences (- n 1) m) (newline) (asc m))))
      
 (define (des n)
    (cond ( (= n 1)
