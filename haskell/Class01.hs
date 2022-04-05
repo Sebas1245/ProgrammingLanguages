@@ -10,7 +10,7 @@ factorial n = n * factorial (n-1)
 
 posint :: Int -> [Int] -> Int
 posint _ [] = error "Integer not found"
-posint x (y:list) = 
+posint x (y:list) =
     if x == y then 1
     else 1 + posint x list
 
@@ -18,3 +18,10 @@ car :: [a] -> a
 car xs = case xs of
     [] -> error "Empty list!"
     (x:_) -> x
+
+smallest :: Int -> Int -> Int -> Int -> Int
+smallest a b c d =
+    if a <= b && a <= c && a <= d then a
+    else if b <= c && b <= d then b
+    else if c <= d then c
+    else d
