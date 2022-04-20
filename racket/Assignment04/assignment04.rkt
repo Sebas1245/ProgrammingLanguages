@@ -10,7 +10,43 @@
         (9 () 
             (15 (11 () ()) 
                 () )))) 
+(define CD
+'(a (b (() ()) ()) (d () ())))
 
+(define EG
+'(a (d () ()) (b (() ()) ()) ))
+
+;;; (8 (5 () ()) (9 () ()))
+
+; problem a)
+(define (binary-tree? bin_tree)
+    (cond 
+        ((null? bin_tree) #t)
+        ((and 
+            (not (list? (car bin_tree)))
+            (list? (cadr bin_tree))
+            (list? (car (cddr bin_tree)))
+        ) (and (binary-tree? (cadr bin_tree)) (binary-tree? (car (cddr bin_tree))))) 
+        (else #f)
+))
+
+; problem b) 
+(define (get-minors bt val) 
+    (if (null? bt)
+        '()
+        (if (> val (car bt))
+            (make-bt-list bt)
+            (get-minors (cadr bt) val)
+        )
+    )
+)
+
+(define (make-bt-list bt)
+    (if (null? bt)
+        '()
+        (append (cons (car bt) (make-bt-list (cadr bt))) (make-bt-list (car (cddr bt))))
+    )
+)
 ; problem c)
 (define (longest-branch bin_tree)
     (if (null? bin_tree)
@@ -31,7 +67,47 @@
     (C (A 12) (D 6)) 
     (D (E 7)) 
     (E (C 3)) )
+)
+
+(define h '( 
+    (A (B 2) (D 10))
+    (B (B 9) (E 5)) 
+    (C (B 12) (D 6)) 
+    (D (B 7)) 
+    (E (B 3)) )
 ) 
+
+(define (destination-nodes graph node)
+    (cond 
+        ((null? graph) '())
+        ((eq? node (caar graph)) (get-dest-nodes (cdar graph)))
+        (else (destination-nodes (cdr graph) node))
+    )
+)
+
+(define (get-dest-nodes adj-list)
+    (if (null? adj-list)
+        '()
+        (cons (caar adj-list) (get-dest-nodes (cdr adj-list)))
+    )
+)
+
+(define (source-nodes graph node)
+    (if (null? graph) 
+        '()
+        (append (get-source-nodes (cdar graph) (caar graph) node) (source-nodes (cdr graph) node)) 
+    )
+)
+
+(define (get-source-nodes adj-list parent-node node)
+    (if (null? adj-list)
+        '()
+        (if (eq? (caar adj-list) node)
+            (cons parent-node (get-source-nodes (cdr adj-list) parent-node node))
+            (get-source-nodes (cdr adj-list) parent-node node)
+        )
+    )
+)
 
 (define (delete-arc graph node1 node2)
     (cond 
