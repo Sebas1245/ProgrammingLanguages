@@ -1,9 +1,10 @@
 #lang racket
 ; Assignment 04
 ; Problems on Data Structures
-; Authors: 
+; Authors: Ana Elisa Estrada A01251091 and Estefanía Charles A01283472, Sebastián Saldaña A01570274
 
 ; Excercise 1: Binary trees
+; example BTs
 (define AB 
     '(8 (5 (2 () ())  
             (7 () ())) 
@@ -15,8 +16,6 @@
 
 (define EG
 '(a (d () ()) (b (() ()) ()) ))
-
-;;; (8 (5 () ()) (9 () ()))
 
 ; problem a)
 (define (binary-tree? bin_tree)
@@ -61,6 +60,7 @@
 )
 
 ; Exercise 2: Graphs
+; example graphs
 (define g '( 
     (A (B 2) (D 10))
     (B (C 9) (E 5)) 
@@ -77,6 +77,7 @@
     (E (B 3)) )
 ) 
 
+; problem a)
 (define (destination-nodes graph node)
     (cond 
         ((null? graph) '())
@@ -92,6 +93,7 @@
     )
 )
 
+; problem b)
 (define (source-nodes graph node)
     (if (null? graph) 
         '()
@@ -109,6 +111,7 @@
     )
 )
 
+; problem c)
 (define (delete-arc graph node1 node2)
     (cond 
         ((null? (car graph)) '())
@@ -130,10 +133,29 @@
 )
 
 ; Problem 3: Higher order functions
-; ex c)
 (define mat1 '((1 2 3)(0 2 1))) 
 (define mat2 '((4 0 3 1)(5 1 2 1)(6 0 1 1)))
 
+; problem a)
+(define (zero-count matrix)
+    (apply + (map (lambda (row)
+            (apply + (map (lambda (el) 
+                (if (zero? el) 1 0)) row))) matrix)))
+
+(define (count-zeros matrix)
+  (length (apply append
+                 (map (lambda (e) (if(zero? e) '(0) '()))
+                      (apply append matrix)))))
+
+
+; problem b) 
+(define (minmax matrix)
+    (list 
+        (foldl (lambda (a b) (if (< a b) a b)) (car (apply append matrix)) (cdr (apply append matrix)))
+        (foldl (lambda (a b) (if (> a b) a b)) (car (apply append matrix)) (cdr (apply append matrix)))))
+
+
+; problem c)
 (define (multmat matrix1 matrix2)
     (map 
         (lambda (row)
@@ -142,5 +164,4 @@
                     (apply +
                         (map * row col)))
                 (apply map list matrix2)))
-        matrix1)
-)
+        matrix1))
