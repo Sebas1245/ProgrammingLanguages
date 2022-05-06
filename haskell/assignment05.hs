@@ -48,11 +48,29 @@ jumps n i s1 s2 =
     else
         i:jumps (n-1) (i+s1) s2 s1
 
--- shift :: Int -> [[Int]] -> [[Int]]
--- shift n lst = 
---     if n == 0 then 
---         lst
---     else 
+shift :: Int -> [[a]] -> [[a]]
+shift 0 lst = lst
+shift n lst = shift (n-1) (shift_once lst)
+
+shift_once :: [[a]] -> [[a]]
+shift_once lst = create_nlen_sublists (get_sublist_lengths lst) (shift_list (concat lst))
+
+create_nlen_sublists :: [Int] -> [a] -> [[a]]
+create_nlen_sublists [] _ = []
+create_nlen_sublists (currLen:restLens) vals = list_with_n_elements currLen vals:create_nlen_sublists restLens (drop currLen vals)
+
+shift_list :: [a] -> [a]
+shift_list lst
+    | length lst < 2 = lst
+    | otherwise = last lst:init lst
+
+list_with_n_elements :: Int -> [a] -> [a]
+list_with_n_elements 0 _ = []
+list_with_n_elements _ [] = []
+list_with_n_elements n (first:rest) = first:list_with_n_elements (n-1) rest
+
+get_sublist_lengths :: [[a]] -> [Int]
+get_sublist_lengths = map length
 
 -- Binary trees 
 data BT t = N (BT t) t (BT t) | E deriving Show
@@ -140,6 +158,10 @@ main = do
     print (jumps 0 1 1 2)
     print (jumps 4 1 1 2)
     print (jumps 7 5 2 5)
+    print "Excercise 5 Test Cases"
+    print (shift 0 [[1,2,3],[4,5,6]])
+    print (shift 1 [[1,2,3],[4,5,6]])
+    print (shift 3 [[],[1],[2,3],[4,5,6]])
     print "Excercise 6 Test Cases"
     print (list_in_order bt "prefix")
     print (list_in_order bt "infix")
