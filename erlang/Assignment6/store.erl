@@ -3,7 +3,7 @@
 -module(store).
 -export([start/0,  
         close_store/0, open_store/0, list_partners/0, sold_products/0,
-        subscribe_partner/1, delete_partner/1,
+        subscribe_partner/1, delete_partner/1, create_order/2,
         register_product/2, remove_product/1, modify_stock/2, stock_list/1, product/3,
         test/0]).
 
@@ -40,11 +40,10 @@ open_store(Counter, Partners, ProductsPids, Orders) ->
                 true ->
                     Pid = spawn(ProductsNode, ?MODULE, product, [store, Product, Quantity]),
                     io:format("Pid ~p ~n", [Pid]),
-                    io:format("ProductsNode ~p ~n", [ProductsNode]),
                     case rpc:call(ProductsNode, erlang, is_process_alive, [Pid]) of
                         true -> 
                             io:format("~p slave ~p created in node ~p~n", [store, Product, ProductsNode]),
-                            open_store(Counter, Partners, ProductsPids++[Pid], Orders);
+                            open_store(Counter, Partners, ProductsPids++[{Product, Pid}], Orders);
                         false -> 
                             io:format("node ~p does not exist~n", [ProductsNode]),
                             open_store(Counter, Partners, ProductsPids, Orders)
@@ -82,35 +81,28 @@ open_store(Counter, Partners, ProductsPids, Orders) ->
                     open_store(Counter, Partner, ProductsPids, Orders)
             end;
         {product_msg, Message, ProductName} -> 
-            IsProductProcessAlive = lists:member(ProductName, ProductsPids),
-            case IsProductProcessAlive of 
+            {_ , {_ , Pid}} = lists:search(fun({Product, _}) -> Product == ProductName end, ProductsPids), 
+            io:format("Found PID ~p ~n", [Pid]),
+            case rpc:call(node(Pid), erlang, is_process_alive,[Pid]) of
                 true ->
-                    Pid = lists:nth(ProductName,ProductsPids),
-                    case rpc:call(node(Pid), erlang, is_process_alive,[Pid]) of
+                    if
+                        Message == die ->
+                            Pid ! {msg, Message},
+                            NewProductsPids = lists:delete(Pid, ProductsPids),
+                            open_store(Counter, Partners, NewProductsPids, Orders);
                         true ->
-                            case Message of
-                                die ->
-                                    Pid ! {msg, Message},
-                                    NewProductsPids = lists:delete(Pid, ProductsPids),
-                                    open_store(Counter, Partners, NewProductsPids, Orders);
-                                true ->
-                                    Pid ! {msg, Message}
-                            end;
-                        false ->
-                            io:format("~p slave ~p does not exist~n",[store, ProductName]),
+                            Pid ! {msg, Message},
                             open_store(Counter, Partners, ProductsPids, Orders)
                     end;
-                false -> 
+                false ->
                     io:format("~p slave ~p does not exist~n",[store, ProductName]),
                     open_store(Counter, Partners, ProductsPids, Orders)
-            end,
-            open_store(Counter, Partners, ProductsPids, Orders);
+            end;
         {msg, list_partners} ->
             io:format("Partner List: ~n"),
             list_partners(Partners),
             open_store(Counter, Partners, ProductsPids, Orders);
         {msg, sold_products} ->
-            io:format("Order history: ~n"),
             sold_products(Orders),
             open_store(Counter, Partners, ProductsPids, Orders);
         stop -> 
@@ -120,7 +112,7 @@ open_store(Counter, Partners, ProductsPids, Orders) ->
 
     
 % Helper functions for termination of the master process
-kill_all([SlavePid | Rest]) ->
+kill_all([{_ , SlavePid} | Rest]) ->
     case rpc:call(node(SlavePid), erlang, is_process_alive,[SlavePid]) of
         true -> 
             SlavePid ! {msg, die},
@@ -143,10 +135,11 @@ list_partners([Partner | RestPartners]) ->
 % Tells master process to execute this function with Order List to initiate recursive calls
 sold_products() ->
     {store, getNode(store)} ! {msg, sold_products}.
-% Recursiveley displays a list of partners 
+% Recursiveley displays a list of orders 
 sold_products([]) ->
-    io:format("END OF ORDER LIST ~n");
+    undefined;
 sold_products([{OrderNumber, {Partner, OrderList}}, RestOfOrders]) ->
+    io:format("Order history: ~n"),
     io:format("--- Order #~p ---~n", [OrderNumber]),
     io:format("Ordered by ~p ~n", [Partner]),
     list_order(OrderList),
@@ -166,15 +159,18 @@ subscribe_partner(Partner) ->
 delete_partner(Partner) ->
     send_partner_msg(delete_partner, Partner).
 
+create_order(Partner, ProductList) -> 
+    
+    create_order(Partner, ProductList, []).
 create_order(Partner, [ ], OrderList) -> {Partner, OrderList};
 create_order(Partner, [{Product, QuantityOrdered} | RestProductList], OrderList) ->
     CurrentStock = send_product_msg(get_stock, Product),
     if 
         CurrentStock < QuantityOrdered ->
-            send_product_msg(modify_stock, 0),
+            io:format("~p is now all out of stock", [Product]),
             create_order(Partner, RestProductList, OrderList++[{Product, CurrentStock}]);
         true ->
-            send_product_msg(modify_stock, CurrentStock - QuantityOrdered),
+            register_product(Product, CurrentStock - QuantityOrdered), % reregister product with modified quantity
             create_order(Partner, RestProductList, OrderList++[{Product, QuantityOrdered}])
     end.
             
@@ -199,8 +195,9 @@ modify_stock(Product, Quantity) ->
     send_product_msg({modify_stock, Quantity}, Product).
 
 % tells master process to show the stock list for a specific product
-stock_list([{Product, _ } | RestProducts]) -> 
-    io:format("Products in Stock: ~n"),
+stock_list([]) -> 
+    io:format("Stock List: ~n");
+stock_list([Product | RestProducts]) -> 
     send_product_msg(show_stock, Product),
     stock_list(RestProducts).
 
@@ -208,17 +205,20 @@ stock_list([{Product, _ } | RestProducts]) ->
 product(Master, ProductName, Quantity) -> 
     receive
         {msg, die} -> 
-            io:format(user, "~p process ~p has died~n",
+            io:format(user, "~p process for product ~p has died~n",
                       [Master, ProductName]);
         {msg, Message} ->
-            io:format(user, "~p process ~p received msg: ~p ~n",
+            io:format(user, "~p process for product ~p received msg: ~p ~n",
                       [Master, ProductName, Message]),
             case Message of
                 {modify_stock, NewQuantity} -> 
+                    io:format("Modifying ~p stock to ~p ~n", [ProductName, NewQuantity]),
                     product(Master, ProductName, NewQuantity);
-                {show_stock} ->
-                    io:format("~p -> ~p ~n", [ProductName, Quantity]);
-                {get_stock} ->
+                show_stock ->
+                    io:format("~p -> ~p ~n", [ProductName, Quantity]),
+                    product(Master, ProductName, Quantity);
+                get_stock ->
+                    io:format("Returning stock quantity ~p ~n", [Quantity]),
                     Quantity;
                 true ->
                     product(Master, ProductName, Quantity)
@@ -248,7 +248,13 @@ test() ->
     subscribe_partner(estefania),
     subscribe_partner(juan),
     list_partners(),
-    delete_partner(sebas),
+    delete_partner(estefania),
     list_partners(),
-    stock_list([{apple, 3}, {orange, 4}, {pear, 5}]).
-
+    stock_list([apple, orange, pear]),
+    create_order(sebas, [{apple, 3}, {orange, 25}]),
+    stock_list([apple, orange]),
+    modify_stock(orange, 4),
+    stock_list([orange]),
+    remove_product(pear),
+    stock_list([apple, orange, pear]),
+    create_order(ana, [{apple, 2}, {orange, 2}]).
