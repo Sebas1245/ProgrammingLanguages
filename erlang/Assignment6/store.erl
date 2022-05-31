@@ -1,5 +1,5 @@
-%% Distributed purchasing system
-
+%% Distributed purchasing system protype
+%% By Sebastián Andrés Saldaña Cárdenas A01570274
 -module(store).
 -export([start/0,  
         close_store/0, open_store/0, list_partners/0, sold_products/0,
@@ -28,7 +28,7 @@ close_store() ->
     
 % function to create the store as a master process
 open_store() -> open_store(0, [], [], []).
-open_store(Counter, Partners, ProductsPids, Orders) ->
+open_store(Counter, Partners, ProductsPids, ProductsSold) ->
     receive
         {create_product, Product, Quantity} ->
             ProductsNode = getNode(products),
@@ -36,17 +36,16 @@ open_store(Counter, Partners, ProductsPids, Orders) ->
             if
                 Alive == pang ->
                     io:format("node products is down~n"),
-                    open_store(Counter, Partners, ProductsPids, Orders);
+                    open_store(Counter, Partners, ProductsPids, ProductsSold);
                 true ->
                     Pid = spawn(ProductsNode, ?MODULE, product, [store, Product, Quantity]),
-                    io:format("Pid ~p ~n", [Pid]),
                     case rpc:call(ProductsNode, erlang, is_process_alive, [Pid]) of
                         true -> 
                             io:format("~p slave ~p created in node ~p~n", [store, Product, ProductsNode]),
-                            open_store(Counter, Partners, ProductsPids++[{Product, Pid}], Orders);
+                            open_store(Counter, Partners, ProductsPids++[{Product, Pid}], ProductsSold);
                         false -> 
                             io:format("node ~p does not exist~n", [ProductsNode]),
-                            open_store(Counter, Partners, ProductsPids, Orders)
+                            open_store(Counter, Partners, ProductsPids, ProductsSold)
                     end
             end;
         {partner_msg, Message, Partner} ->
@@ -56,10 +55,10 @@ open_store(Counter, Partners, ProductsPids, Orders) ->
                     case PartnerExists of  
                         true ->
                             io:format("Partner already exists, please try with a different name ~n"),
-                            open_store(Counter, Partners, ProductsPids, Orders);
+                            open_store(Counter, Partners, ProductsPids, ProductsSold);
                         false ->
-                            io:format("Creating partner ~n"),
-                            open_store(Counter, Partners++[Partner], ProductsPids, Orders)
+                            io:format("Creating partner ~p ~n", [Partner]),
+                            open_store(Counter, Partners++[Partner], ProductsPids, ProductsSold)
                     end;
                 delete_partner ->
                     PartnerExists = lists:member(Partner, Partners),
@@ -67,44 +66,59 @@ open_store(Counter, Partners, ProductsPids, Orders) ->
                         true -> 
                             NewPartnerList = lists:delete(Partner, Partners),
                             io:format("Deleting partner ~p ~n", [Partner]),
-                            open_store(Counter, NewPartnerList, ProductsPids, Orders);
+                            open_store(Counter, NewPartnerList, ProductsPids, ProductsSold);
                         false ->
                             io:format("Partner ~p is not registered ~n", [Partner]),
-                            open_store(Counter, Partners, ProductsPids, Orders)
+                            open_store(Counter, Partners, ProductsPids, ProductsSold)
                     end;
-                {create_order, Partner, ProductList} ->
-                    NewCounter = Counter + 1,
-                    io:format("Creating order for partner ~p ~n", [Partner]),
-                    open_store(NewCounter, Partners, ProductsPids, Orders++[{NewCounter, create_order(Partner, ProductList, [])}]);
+                % {create_order, Partner, ProductList} ->
+                %     NewCounter = Counter + 1,
+                %     io:format("Creating order for partner ~p ~n", [Partner]),
+                %     open_store(NewCounter, Partners, ProductsPids, Orders++[{NewCounter, create_order(Partner, ProductList, [])}]);
                 true ->
                     io:format("message unrecognized"),
-                    open_store(Counter, Partner, ProductsPids, Orders)
+                    open_store(Counter, Partner, ProductsPids, ProductsSold)
             end;
         {product_msg, Message, ProductName} -> 
             {_ , {_ , Pid}} = lists:search(fun({Product, _}) -> Product == ProductName end, ProductsPids), 
-            io:format("Found PID ~p ~n", [Pid]),
-            case rpc:call(node(Pid), erlang, is_process_alive,[Pid]) of
-                true ->
-                    if
-                        Message == die ->
-                            Pid ! {msg, Message},
-                            NewProductsPids = lists:delete(Pid, ProductsPids),
-                            open_store(Counter, Partners, NewProductsPids, Orders);
+            if 
+                Pid =/= false -> 
+                    case rpc:call(node(Pid), erlang, is_process_alive,[Pid]) of
                         true ->
-                            Pid ! {msg, Message},
-                            open_store(Counter, Partners, ProductsPids, Orders)
+                            if
+                                Message == die ->
+                                    Pid ! {msg, Message},
+                                    NewProductsPids = lists:delete(Pid, ProductsPids),
+                                    open_store(Counter, Partners, NewProductsPids, ProductsSold);
+                                true ->
+                                    Pid ! {msg, Message},
+                                    open_store(Counter, Partners, ProductsPids, ProductsSold)
+                            end;
+                        false ->
+                            io:format("~p slave ~p does not exist~n",[store, ProductName]),
+                            open_store(Counter, Partners, ProductsPids, ProductsSold)
                     end;
-                false ->
+                true ->
+                    io:format("You must first register ~p as a product~n", [ProductName]),
+                    open_store(Counter, Partners, ProductsPids, ProductsSold)
+            end;
+        {msg, create_product_sale, ProductName, Quantity} ->
+            io:format("Creating product sale for ~p ~n", [ProductName]),
+            {_ , {_ , Pid}} = lists:search(fun({Product, _}) -> Product == ProductName end, ProductsPids), 
+            case rpc:call(node(Pid), erlang, is_process_alive,[Pid]) of
+                true -> 
+                    open_store(Counter, Partners, ProductsPids, create_product_sale(ProductName, Quantity, ProductsSold));
+                false -> 
                     io:format("~p slave ~p does not exist~n",[store, ProductName]),
-                    open_store(Counter, Partners, ProductsPids, Orders)
+                    open_store(Counter, Partners, ProductsPids, ProductsSold)
             end;
         {msg, list_partners} ->
             io:format("Partner List: ~n"),
             list_partners(Partners),
-            open_store(Counter, Partners, ProductsPids, Orders);
+            open_store(Counter, Partners, ProductsPids, ProductsSold);
         {msg, sold_products} ->
-            sold_products(Orders),
-            open_store(Counter, Partners, ProductsPids, Orders);
+            sold_products(ProductsSold),
+            open_store(Counter, Partners, ProductsPids, ProductsSold);
         stop -> 
             kill_all(ProductsPids),
             io:format("master ~p has finished~n",[store])
@@ -132,24 +146,15 @@ list_partners([Partner | RestPartners]) ->
     io:format("~p ~n", [Partner]),
     list_partners(RestPartners).
 
-% Tells master process to execute this function with Order List to initiate recursive calls
+% Tells master process to execute this function with Sold products to initiate recursive calls
 sold_products() ->
     {store, getNode(store)} ! {msg, sold_products}.
 % Recursiveley displays a list of orders 
 sold_products([]) ->
-    undefined;
-sold_products([{OrderNumber, {Partner, OrderList}}, RestOfOrders]) ->
-    io:format("Order history: ~n"),
-    io:format("--- Order #~p ---~n", [OrderNumber]),
-    io:format("Ordered by ~p ~n", [Partner]),
-    list_order(OrderList),
-    sold_products(RestOfOrders).
-
-% Helper function to list all products in one order
-list_order([]) -> undefined;
-list_order([{Product, QuantityOrdered} | RestOrderList]) ->
-    io:format("~p ~p ~n", [Product, QuantityOrdered]),
-    list_order(RestOrderList).
+    io:format("END OF SOLD PRODUCTS ~n");
+sold_products([{Product, Quantity} | RestOfProductsSold]) ->
+    io:format("~p ~p ~n", [Product, Quantity]),
+    sold_products(RestOfProductsSold).
 
 %% ==============================================================
 % Partners entity
@@ -159,21 +164,21 @@ subscribe_partner(Partner) ->
 delete_partner(Partner) ->
     send_partner_msg(delete_partner, Partner).
 
-create_order(Partner, ProductList) -> 
-    
-    create_order(Partner, ProductList, []).
-create_order(Partner, [ ], OrderList) -> {Partner, OrderList};
-create_order(Partner, [{Product, QuantityOrdered} | RestProductList], OrderList) ->
-    CurrentStock = send_product_msg(get_stock, Product),
-    if 
-        CurrentStock < QuantityOrdered ->
-            io:format("~p is now all out of stock", [Product]),
-            create_order(Partner, RestProductList, OrderList++[{Product, CurrentStock}]);
-        true ->
-            register_product(Product, CurrentStock - QuantityOrdered), % reregister product with modified quantity
-            create_order(Partner, RestProductList, OrderList++[{Product, QuantityOrdered}])
-    end.
-            
+% allows partners to create an order from a product list
+create_order(_, []) -> 
+    io:format("Creating product orders ~n");
+create_order(Partner, [{Product ,Quantity} | RestProductList]) -> 
+    send_product_msg({create_order, Quantity}, Product),
+    io:format("Requesting order for ~p ~n", [Product]),
+    create_order(Partner, RestProductList).
+
+% Helper functions to store product sales
+create_product_sale(Product, SoldQuantity, [{Product, Sales} | T]) ->
+    [{Product, Sales + SoldQuantity} | T];
+create_product_sale(Product, SoldQuantity,[H | T]) ->
+    [H | create_product_sale(Product, SoldQuantity, T)];
+create_product_sale(Product, SoldQuantity, []) ->
+    [{Product, SoldQuantity}].
 
 % forwards a message from the partner entity to the master process
 send_partner_msg(Message, Partner) ->
@@ -196,7 +201,7 @@ modify_stock(Product, Quantity) ->
 
 % tells master process to show the stock list for a specific product
 stock_list([]) -> 
-    io:format("Stock List: ~n");
+    io:format("~n");
 stock_list([Product | RestProducts]) -> 
     send_product_msg(show_stock, Product),
     stock_list(RestProducts).
@@ -215,11 +220,17 @@ product(Master, ProductName, Quantity) ->
                     io:format("Modifying ~p stock to ~p ~n", [ProductName, NewQuantity]),
                     product(Master, ProductName, NewQuantity);
                 show_stock ->
-                    io:format("~p -> ~p ~n", [ProductName, Quantity]),
+                    io:format("Stock for ~p -> ~p ~n", [ProductName, Quantity]),
                     product(Master, ProductName, Quantity);
-                get_stock ->
-                    io:format("Returning stock quantity ~p ~n", [Quantity]),
-                    Quantity;
+                {create_order, QuantityOrdered} ->
+                    if 
+                        QuantityOrdered > Quantity ->
+                            {store, getNode(store)} ! {msg, create_product_sale, ProductName, 0},
+                            product(Master, ProductName, 0);
+                        true -> 
+                            {store, getNode(store)} ! {msg, create_product_sale, ProductName, QuantityOrdered},
+                            product(Master, ProductName, Quantity - QuantityOrdered)
+                    end;
                 true ->
                     product(Master, ProductName, Quantity)
             end;
@@ -233,16 +244,19 @@ send_product_msg(Message, ProductName) ->
 
 %% ==============================================================
 
-%% Test cases
+%% TESTING
 % To test this prototype, first open to terminals
 % On the first one, run the command erl -sname store
 % On the second one, run the command erl -sname products
 % This will enable the two distributed nodes on which the system runs
+% This function is an example of what to run to test the prototye
 test() -> 
     start(),
+    io:format("Registering products ~n"),
     register_product(apple, 30),
     register_product(orange, 25),
     register_product(pear, 28),
+    io:format("Subscribing partners ~n"),
     subscribe_partner(sebas),
     subscribe_partner(ana),
     subscribe_partner(estefania),
@@ -252,9 +266,15 @@ test() ->
     list_partners(),
     stock_list([apple, orange, pear]),
     create_order(sebas, [{apple, 3}, {orange, 25}]),
+    io:format("Showing current stock ~n"),
     stock_list([apple, orange]),
     modify_stock(orange, 4),
     stock_list([orange]),
     remove_product(pear),
+    io:format("Showing current stock ~n"),
     stock_list([apple, orange, pear]),
-    create_order(ana, [{apple, 2}, {orange, 2}]).
+    stock_list([apple, orange]),
+    create_order(ana, [{apple, 2}, {orange, 2}]),
+    io:format("Showing current list of sales ~n"),
+    sold_products(),
+    close_store().
